@@ -1,0 +1,95 @@
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+
+RF24 radio(10, 9); // CE, CSN
+const byte address[6] = "00001"; // Dirección para la comunicación
+
+int xAxis = 0; // Variable para almacenar el valor recibido del eje X
+int yAxis = 0; // Variable para almacenar el valor recibido del eje Y
+int buttonState = 0; // Variable para almacenar el estado del botón recibido
+#define AIN1 2
+#define AIN2 3
+#define BIN1 4
+#define BIN2 5
+
+void setup() {
+  Serial.begin(9600);
+  radio.begin();                  // Iniciar el módulo RF24
+  radio.openReadingPipe(0, address); // Establecer la dirección para la lectura
+  radio.setPALevel(RF24_PA_MIN);  // Configurar la potencia de transmisión
+  radio.startListening();  
+  pinMode(AIN1, OUTPUT);
+  pinMode(AIN2, OUTPUT);
+  pinMode(BIN1, OUTPUT);
+  pinMode(BIN2, OUTPUT);
+       
+}
+
+void loop() {
+  // Verificar si hay datos disponibles para leer
+  if (radio.available()) {
+    int dataReceived[3]; // Array para almacenar los tres datos recibidos
+
+    // Leer los datos recibidos
+    radio.read(&dataReceived, sizeof(dataReceived));
+
+    // Asignar los datos a las variables correspondientes
+    xAxis = dataReceived[0];
+    yAxis = dataReceived[1];
+    buttonState = dataReceived[2];
+
+    // Mostrar los valores recibidos en el Monitor Serial
+    Serial.print("X: ");
+    Serial.print(xAxis);
+    Serial.print(", Y: ");
+    Serial.print(yAxis);
+    Serial.print(", Button: ");
+    Serial.println(buttonState);
+  
+  delay(20); // Pequeña pausa para evitar sobrecarga de lectura
+ control_robot();
+  }
+  delay(100);
+}
+
+void control_robot() {
+  // Moverse hacia adelante
+  if (yAxis<400) {
+    digitalWrite(AIN1, HIGH);
+    digitalWrite(AIN2, LOW);
+    digitalWrite(BIN1, HIGH);
+    digitalWrite(BIN2, LOW);
+  }
+  // Moverse hacia atrás
+   if (yAxis>600) {
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, HIGH);
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, HIGH);
+  }
+  
+  // Moverse hacia la derecha
+  if (xAxis>800 ) {
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, HIGH);
+    digitalWrite(BIN1, HIGH);
+    digitalWrite(BIN2, LOW);
+  }
+  
+  // Moverse hacia la izquierda
+   if (xAxis<400) {
+    digitalWrite(AIN1, HIGH);
+    digitalWrite(AIN2, LOW);
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, HIGH);
+  }
+  
+  // Detenerse si no hay movimiento en X o Y
+ if (xAxis>511 && xAxis<514  && yAxis>497 && yAxis<500  ){
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, LOW);
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, LOW);
+  }
+}
