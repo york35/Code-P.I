@@ -1,0 +1,54 @@
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+
+RF24 radio(10, 9); // CE, CSN
+const byte address[6] = "00001"; // Dirección para la comunicación
+
+int xAxis = 0; // Variable para almacenar el valor del eje X
+int yAxis = 0; // Variable para almacenar el valor del eje Y
+int buttonState = 0; // Estado actual del botón (1 = presionado, 0 = no presionado)
+int lastButtonState = 0; // Estado previo del botón para detectar cambios
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(8, INPUT_PULLUP);       // Configurar el pin del botón como entrada con resistencia pull-up
+  radio.begin();                  // Iniciar el módulo RF24
+  radio.openWritingPipe(address); // Establecer la dirección para la escritura
+  radio.setPALevel(RF24_PA_MIN);  // Configurar la potencia de transmisión
+  radio.stopListening();          // Detener la escucha, ya que este es el transmisor
+}
+
+void loop() {
+  // Leer los valores del joystick
+  xAxis = analogRead(A0); // Leer eje X del joystick
+  yAxis = analogRead(A1); // Leer eje Y del joystick
+
+  // Leer el estado del botón y detectar si ha sido presionado
+  int currentButtonState = digitalRead(8); // Leer el estado actual del botón
+
+  // Detectar si el botón ha cambiado de estado
+  if (currentButtonState == LOW && lastButtonState == HIGH) {
+    buttonState = 1; // Se presionó el botón
+  } else if (currentButtonState == HIGH && lastButtonState == LOW) {
+    buttonState = 0; // Se soltó el botón
+  }
+
+  lastButtonState = currentButtonState; // Actualizar el estado previo del botón
+
+  // Crear un array de tres enteros para enviar los datos juntos
+  int dataToSend[3] = {xAxis, yAxis, buttonState}; 
+
+  // Enviar los valores X, Y y el estado del botón al receptor
+  bool success = radio.write(&dataToSend, sizeof(dataToSend));
+
+  // Mostrar los valores enviados en el Monitor Serial
+  Serial.print("X: ");
+  Serial.print(xAxis);
+  Serial.print(", Y: ");
+  Serial.print(yAxis);
+  Serial.print(", Button: ");
+  Serial.println(buttonState);
+
+  
+}
